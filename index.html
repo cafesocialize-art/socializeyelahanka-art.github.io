@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>AR Video on Paper • Rakesh</title>
+  <!-- A-Frame + AR.js CDN -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #000; }
+    .hud {
+      position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 45%, rgba(0,0,0,0.85) 100%);
+      color: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; z-index: 9;
+    }
+    .hud .left { display: flex; flex-direction: column; font-size: 12px; line-height: 1.2; opacity: .95; }
+    .hud .left b { font-size: 14px; }
+    .btns { display:flex; gap:8px; }
+    button {
+      appearance: none; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff;
+      padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; letter-spacing: .2px;
+    }
+    button:active { transform: scale(0.98); }
+    .tip { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); color:#fff; font-size:12px; background: rgba(0,0,0,.55); padding:6px 10px; border-radius: 10px; z-index: 9; }
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+  <!-- Hidden HTML5 video element used as the texture source. Replace the src with your MP4 URL.  -->
+  <video id="promoVideo" src="YOUR_VIDEO_URL.mp4" playsinline webkit-playsinline preload="auto" loop muted class="hidden"></video>
+
+  <!-- AR Scene: using preset='hiro' (print the Hiro marker and place it on your flyer/poster) -->
+  <a-scene
+    embedded
+    renderer="antialias: true; colorManagement: true"
+    vr-mode-ui="enabled: false"
+    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; maxDetectionRate: 60;">
+
+    <a-assets>
+      <video id="vid" src="YOUR_VIDEO_URL.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
+    </a-assets>
+
+    <!-- Marker: 'hiro' comes built-in. Print a Hiro marker (A4) and place it on the paper design. -->
+    <a-marker preset="hiro">
+      <!-- Plane sized to 16:9 video. Adjust width/height to scale on the marker. -->
+      <a-plane id="screen" position="0 0 0" rotation="-90 0 0" width="1.2" height="0.675" material="src: #vid; transparent: true;"></a-plane>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <div id="tip" class="tip">Point your camera at the <b>HIRO</b> marker. Tap <b>Unmute</b> for audio.</div>
+
+  <div class="hud">
+    <div class="left">
+      <b>AR Video</b>
+      <span>Align your camera with the printed marker to play.</span>
+    </div>
+    <div class="btns">
+      <button id="btnPlay">Play</button>
+      <button id="btnPause">Pause</button>
+      <button id="btnUnmute">Unmute</button>
+      <button id="btnRestart">Restart</button>
+    </div>
+  </div>
+
+  <script>
+    // Get references
+    const v = document.querySelector('#vid');
+    const promo = document.querySelector('#promoVideo');
+    const btnPlay = document.querySelector('#btnPlay');
+    const btnPause = document.querySelector('#btnPause');
+    const btnUnmute = document.querySelector('#btnUnmute');
+    const btnRestart = document.querySelector('#btnRestart');
+    const tip = document.querySelector('#tip');
+
+    // Keep the hidden <video> in sync (helps some mobile browsers prime playback)
+    const syncSrc = () => { promo.src = v.getAttribute('src'); };
+    syncSrc();
+
+    // Autoplay muted when marker is found
+    const marker = document.querySelector('a-marker');
+    marker.addEventListener('markerFound', async () => {
+      try { await v.play(); } catch (e) { /* user gesture needed */ }
+      tip.classList.add('hidden');
+    });
+    marker.addEventListener('markerLost', () => {
+      v.pause();
+    });
+
+    // Controls
+    btnPlay.addEventListener('click', async () => { try { await v.play(); } catch(e){} });
+    btnPause.addEventListener('click', () => v.pause());
+    btnUnmute.addEventListener('click', async () => {
+      v.muted = false; promo.muted = false;
+      try { await v.play(); } catch(e){}
+    });
+    btnRestart.addEventListener('click', async () => { v.currentTime = 0; try { await v.play(); } catch(e){} });
+
+    // iOS tap-to-start fallback: first touch primes playback
+    const prime = async () => {
+      try { await v.play(); v.pause(); } catch(e){}
+      window.removeEventListener('touchend', prime);
+    };
+    window.addEventListener('touchend', prime, { once: true });
+  </script>
+</body>
+</html>
