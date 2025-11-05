@@ -35,7 +35,7 @@
     embedded
     renderer="antialias: true; colorManagement: true"
     vr-mode-ui="enabled: false"
-    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; maxDetectionRate: 60;">
+    arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: true; trackingMethod: best; maxDetectionRate: 60;">
 
     <a-assets>
       <video id="vid" src="YOUR_VIDEO_URL.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
@@ -104,6 +104,32 @@
       window.removeEventListener('touchend', prime);
     };
     window.addEventListener('touchend', prime, { once: true });
+  </script>
+  <script>
+    // Show camera errors on-screen
+    const showErr = (msg) => {
+      let box = document.getElementById('tip');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'tip';
+        box.className = 'tip';
+        document.body.appendChild(box);
+      }
+      box.textContent = msg;
+      box.classList.remove('hidden');
+    };
+
+    // Patch getUserMedia to surface errors
+    const origGetUserMedia = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices) : null;
+    if (origGetUserMedia) {
+      navigator.mediaDevices.getUserMedia = async (constraints) => {
+        try { return await origGetUserMedia(constraints); }
+        catch (e) {
+          showErr(`Camera error: ${e.name} - ${e.message}`);
+          throw e;
+        }
+      };
+    }
   </script>
 </body>
 </html>
